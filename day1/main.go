@@ -2,98 +2,44 @@ package main
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"math"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 func main() {
-	// Read the input file
-	sumOfDistances := calculateDistance("input.txt")
+	firstCol, secondCol := parseInput("input.txt")
 
-	similarities := step2("input.txt")
+	wg := new(sync.WaitGroup)
+	wg.Add(2)
 
-	log.Println("Sum of distances: ", sumOfDistances)
+	go func() {
+		defer wg.Done()
+		sumOfDistances := calculateDistance(firstCol, secondCol)
+		fmt.Println("Sum of distances: ", sumOfDistances)
+	}()
 
-	log.Println("Sum of similarities: ", similarities)
+	go func() {
+		defer wg.Done()
+		similarities := calculateSimilarities(firstCol, secondCol)
+		fmt.Println("Similarities: ", similarities)
+	}()
+
+	wg.Wait()
 }
 
-func calculateDistance(path string) int {
-	file, err := os.Open(path)
-	defer file.Close()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	scanner := bufio.NewScanner(file)
-
-	list1 := make([]int, 0)
-	list2 := make([]int, 0)
-
-	for scanner.Scan() {
-		text := scanner.Text()
-
-		if text == "" {
-			continue
-		}
-
-		int1, int2 := parseLine(text)
-
-		list1 = append(list1, int1)
-		list2 = append(list2, int2)
-	}
-
-	// Sort the lists
-	sort.Ints(list1)
-	sort.Ints(list2)
-
-	sumOfDistances := 0
-	for i := 0; i < len(list1); i++ {
-		sumOfDistances += int(math.Abs(float64(list2[i] - list1[i])))
-	}
-	return sumOfDistances
-}
-
-func step2(path string) int {
-	file, err := os.Open(path)
-	defer file.Close()
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	scanner := bufio.NewScanner(file)
-
-	list1 := make([]int, 0)
-	list2 := make([]int, 0)
-
-	for scanner.Scan() {
-		text := scanner.Text()
-
-		if text == "" {
-			continue
-		}
-
-		int1, int2 := parseLine(text)
-
-		list1 = append(list1, int1)
-		list2 = append(list2, int2)
-	}
-
-	return calculateSimilarities(list1, list2)
-}
-
-func calculateSimilarities(list1 []int, list2 []int) int {
-	occurrences := countOccurrences(list2)
+func calculateSimilarities(a []int, b []int) int {
+	occurrences := countOccurrences(b)
 
 	similarities := 0
-	for i := 0; i < len(list1); i++ {
-		if occurrences[list1[i]] > 0 {
-			similarities += list1[i] * occurrences[list1[i]]
+	for i := 0; i < len(a); i++ {
+		if occurrences[a[i]] > 0 {
+			similarities += a[i] * occurrences[a[i]]
 		}
 	}
 
@@ -127,18 +73,17 @@ func parseLine(line string) (int, int) {
 	return int1, int2
 }
 
-func readFile(path string) chan string {
+func readFile(path string) <-chan string {
 	file, err := os.Open(path)
-	defer file.Close()
 
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	scanner := bufio.NewScanner(file)
 	out := make(chan string)
 
 	go func() {
+		defer file.Close()
 		for scanner.Scan() {
 			text := scanner.Text()
 			out <- text
@@ -147,4 +92,49 @@ func readFile(path string) chan string {
 	}()
 
 	return out
+}
+
+type Vector struct {
+	x int
+	y int
+}
+
+func readLines(in <-chan string) <-chan Vector {
+	out := make(chan Vector)
+
+	go func() {
+		for line := range in {
+			int1, int2 := parseLine(line)
+			out <- Vector{x: int1, y: int2}
+		}
+		close(out)
+	}()
+
+	return out
+}
+
+func calculateDistance(a []int, b []int) int {
+	sumOfDistances := 0
+	for i := 0; i < len(a); i++ {
+		sumOfDistances += int(math.Abs(float64(b[i] - a[i])))
+	}
+	return sumOfDistances
+}
+
+func parseInput(path string) ([]int, []int) {
+	in := readFile(path)
+	vectors := readLines(in)
+
+	firstCol := make([]int, 0)
+	secondCol := make([]int, 0)
+
+	for vector := range vectors {
+		firstCol = append(firstCol, vector.x)
+		secondCol = append(secondCol, vector.y)
+	}
+
+	sort.Ints(firstCol)
+	sort.Ints(secondCol)
+
+	return firstCol, secondCol
 }
