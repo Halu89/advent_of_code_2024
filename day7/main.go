@@ -134,12 +134,25 @@ func concatenate(a, b int) int {
 	return result
 }
 
-func isEquationValid(equation Equation, operators []Operator) bool {
-	for _, operatorList := range enumerate(len(equation.operands)-1, operators) {
+func hash(size int, operators []Operator) string {
+	return fmt.Sprintf("%d %v", size, operators)
+}
+
+func isEquationValid(equation Equation, operators []Operator, memo *map[string][][]Operator) bool {
+	operatorEnumerations, ok := (*memo)[hash(len(equation.operands)-1, operators)]
+	if !ok {
+		operatorEnum := enumerate(len(equation.operands)-1, operators)
+		(*memo)[hash(len(equation.operands)-1, operators)] = operatorEnum
+	}
+
+	for _, operatorList := range operatorEnumerations {
 		result := equation.operands[0]
 
 		for i, operator := range operatorList {
 			result = operator.doOperate(result, equation.operands[i+1])
+			if result > equation.target {
+				break
+			}
 		}
 
 		if result == equation.target {
@@ -155,7 +168,7 @@ func processValidEquations(equation <-chan Equation, operators []Operator) <-cha
 
 	go func() {
 		for eq := range equation {
-			if isEquationValid(eq, operators) {
+			if isEquationValid(eq, operators, &map[string][][]Operator{}) {
 				out <- eq
 			}
 		}
