@@ -7,17 +7,22 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func main() {
+	startTime := time.Now()
+
 	lines := readFile("input.txt")
 	equations := processLines(lines)
 
-	operators := []Operator{Plus, Multiply}
+	operators := []Operator{Plus, Multiply, Concatenate}
 	validEquations := processValidEquations(equations, operators)
 
 	result := sumValidEquations(validEquations)
 	fmt.Println(result)
+
+	fmt.Println("Execution time: ", time.Since(startTime))
 }
 
 type Equation struct {
@@ -83,13 +88,18 @@ func processLines(lines <-chan string) <-chan Equation {
 type Operator byte
 
 const (
-	Plus     Operator = '+'
-	Multiply Operator = '*'
+	Plus        Operator = '+'
+	Multiply    Operator = '*'
+	Concatenate Operator = '|'
 )
 
 func enumerate(size int, operators []Operator) [][]Operator {
 	if size == 1 {
-		return [][]Operator{{Plus}, {Multiply}}
+		var result [][]Operator
+		for _, operator := range operators {
+			result = append(result, []Operator{operator})
+		}
+		return result
 	}
 
 	var result [][]Operator
@@ -109,9 +119,19 @@ func (o *Operator) doOperate(a, b int) int {
 		return a + b
 	case Multiply:
 		return a * b
+	case Concatenate:
+		return concatenate(a, b)
 	}
 
 	panic("Unknown operator")
+}
+
+func concatenate(a, b int) int {
+	result, err := strconv.Atoi(strconv.Itoa(a) + strconv.Itoa(b))
+	if err != nil {
+		log.Fatal(err)
+	}
+	return result
 }
 
 func isEquationValid(equation Equation, operators []Operator) bool {

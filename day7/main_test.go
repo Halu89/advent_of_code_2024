@@ -31,6 +31,35 @@ func TestEnumerate(t *testing.T) {
 	}
 }
 
+func TestEnumerateWithConcatenation(t *testing.T) {
+	// Test cases
+	tests := []struct {
+		input    int
+		expected int
+	}{
+		{1, 3},
+		{2, 9},
+		{3, 27},
+	}
+
+	operators := []Operator{Plus, Multiply, Concatenate}
+
+	// Run tests
+	for _, test := range tests {
+		actual := enumerate(test.input, operators)
+
+		if len(actual) != test.expected {
+			t.Errorf("Expected: %v. Actual: %v", test.expected, actual)
+		}
+
+		for _, list := range actual {
+			if len(list) != test.input {
+				t.Errorf("Expected: %v. Actual: %v", test.input, len(list))
+			}
+		}
+	}
+}
+
 func TestParseEquation(t *testing.T) {
 	tests := []struct {
 		input    string
