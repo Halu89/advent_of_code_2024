@@ -22,7 +22,7 @@ func main() {
 	uniqueAntinodes := make(map[string]Position)
 
 	for sameAntennasKind := range maps.Values(mapAntennas) {
-		antinodes := getAntinodes(sameAntennasKind, mapBoundaries)
+		antinodes := getAntinodesStep2(sameAntennasKind, mapBoundaries)
 		for _, antinode := range antinodes {
 			_, ok := uniqueAntinodes[antinode.String()]
 
@@ -149,6 +149,43 @@ func getAntinodes(a []Antenna, b InputBoundaries) []Position {
 			}
 		}
 
+	}
+
+	return antinodes
+}
+
+func getAntinodesStep2(a []Antenna, b InputBoundaries) []Position {
+	antinodes := make([]Position, 0)
+
+	for i, antenna := range a {
+		for j := i + 1; j < len(a); j++ {
+			vec := Position{antenna.position.x - a[j].position.x, antenna.position.y - a[j].position.y}
+
+			k := 0
+
+			for {
+				antinode1 := Position{antenna.position.x - k*vec.x, antenna.position.y - k*vec.y}
+				antinode2 := Position{antenna.position.x + k*vec.x, antenna.position.y + k*vec.y}
+
+				one, two := false, false
+
+				if isInBoundaries(antinode1, b) {
+					antinodes = append(antinodes, antinode1)
+					one = true
+				}
+
+				if isInBoundaries(antinode2, b) {
+					antinodes = append(antinodes, antinode2)
+					two = true
+				}
+
+				k++
+
+				if !one && !two {
+					break
+				}
+			}
+		}
 	}
 
 	return antinodes
